@@ -75,7 +75,7 @@
 ## Установка
 
 ```bash
-git clone https://github.com/<you>/TinkoffMCP.git
+git clone https://github.com/SadLiter/TinkoffMCP.git
 cd TinkoffMCP
 uv sync
 ```
