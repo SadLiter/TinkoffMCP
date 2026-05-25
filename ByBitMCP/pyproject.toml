@@ -1,0 +1,78 @@
+[project]
+name = "bybit-mcp"
+version = "0.1.0"
+description = "Read-only MCP server for the ByBit V5 API. Exposes wallet balance, positions, P&L, orders, executions, asset history, P2P, and market data to MCP-capable clients (Claude Desktop, etc.). Unofficial, not affiliated with ByBit Fintech Ltd."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "ByBitMCP contributors" }]
+keywords = ["mcp", "bybit", "crypto", "trading", "portfolio", "claude", "anthropic"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "mcp[cli]>=1.2.0,<2",
+    "httpx>=0.27.0,<1",
+]
+
+[project.scripts]
+bybit-mcp = "bybit_mcp.server:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9,<1",
+    "pytest>=8,<9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bybit_mcp"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src"]
+extend-exclude = [".venv", ".beads", ".claude", ".serena"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "UP", "B", "SIM", "C4", "RUF", "G",
+    "PIE", "PTH", "A", "ARG", "T20", "RET", "PL",
+]
+ignore = [
+    "PLR0913",
+    "PLR0912",  # signed-call dispatch in client.py has many small branches; reads fine
+    "PLR2004",
+    "E501",
+    "RET504",
+    "SIM108",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# `category` / `id` / `type` in tool params often match API contract field names verbatim.
+"src/bybit_mcp/tools/*.py" = ["A002"]
+# Server uses lazy imports (PLC0415) and a `global _client` singleton (PLW0603) intentionally.
+"src/bybit_mcp/server.py" = ["PLC0415", "PLW0603"]
+# pytest idiomatically uses bare `assert`.
+"tests/*.py" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bybit_mcp"]
+combine-as-imports = true
