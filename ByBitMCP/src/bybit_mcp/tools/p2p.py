@@ -15,14 +15,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from .._runtime import get, post
+from .._runtime import post
 from ..server import mcp
 
 
 @mcp.tool()
 def p2p_get_account_info() -> dict[str, Any]:
-    """P2P account info: nickname, completion rate, level, payment methods."""
-    return get("/v5/p2p/user/personal/info")
+    """P2P account info: nickname, completion rate, level, payment methods.
+
+    Per Bybit V5 spec all P2P endpoints are POST (even read-only ones).
+    """
+    return post("/v5/p2p/user/personal/info", body={})
 
 
 @mcp.tool()

@@ -197,8 +197,12 @@ def loan_get_borrowable_coins() -> dict[str, Any]:
 
 @mcp.tool()
 def loan_get_account_info() -> dict[str, Any]:
-    """Crypto-loan account-level info: total debt, collateral value, LTV."""
-    return get("/v5/crypto-loan/position")
+    """Crypto-loan position summary (`/v5/crypto-loan-common/position`).
+
+    Returns borrowList (fixed + flexible debt per coin), collateralList,
+    supplyList, ltv, totalCollateral / totalDebt / totalSupply in USD.
+    """
+    return get("/v5/crypto-loan-common/position")
 
 
 @mcp.tool()

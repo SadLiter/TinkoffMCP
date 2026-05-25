@@ -233,8 +233,13 @@ class ByBitClient:
                     "https://www.bybit.com/app/user/api-management."
                 )
             timestamp = int(time.time() * 1000)
+            # Build query string ONCE in deterministic (sorted) order — the same
+            # string is signed AND used as the actual URL query.  Letting httpx
+            # re-serialise the params dict can reorder them and break the
+            # signature (Bybit V5 retCode 10004).
+            query_string = urlencode(sorted(params.items())) if params else ""
             if method == "GET":
-                payload = urlencode(sorted(params.items()))
+                payload = query_string
             else:
                 # POST: sign the JSON body (or empty string when there is none).
                 # Bybit signs POST requests using only the body — query params on a
@@ -263,13 +268,23 @@ class ByBitClient:
             private,
         )
 
+        # For unsigned (public) GETs the deterministic query string isn't
+        # required; reuse the same form anyway for consistency.
+        if not private:
+            query_string = urlencode(sorted(params.items())) if params else ""
+        url_with_query = f"{path}?{query_string}" if query_string else path
+
         try:
             if method == "GET":
-                response = self._client.get(path, params=params, headers=headers)
+                # IMPORTANT: pass the already-serialised query in the URL.
+                # Do NOT pass `params=params` here — httpx would re-encode in
+                # dict-insertion order and the signature would drift.
+                response = self._client.get(url_with_query, headers=headers)
             elif method == "POST":
+                # POST may carry params in URL (card-style) AND/OR a JSON body.
+                # Body is what's signed; the URL query is just the actual path.
                 response = self._client.post(
-                    path,
-                    params=params if params else None,
+                    url_with_query,
                     json=body if body else None,
                     headers=headers,
                 )
