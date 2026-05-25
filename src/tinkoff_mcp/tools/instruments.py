@@ -36,7 +36,9 @@ def instruments_shares(
 ) -> dict[str, Any]:
     """List shares. ``instrument_status``: ``INSTRUMENT_STATUS_BASE`` (default,
     only tradable via API) or ``INSTRUMENT_STATUS_ALL`` (everything)."""
-    return call_api("InstrumentsService", "Shares", _list_body(instrument_status, instrument_exchange))
+    return call_api(
+        "InstrumentsService", "Shares", _list_body(instrument_status, instrument_exchange)
+    )
 
 
 @mcp.tool()
@@ -45,7 +47,9 @@ def instruments_bonds(
     instrument_exchange: str | None = None,
 ) -> dict[str, Any]:
     """List bonds. See ``instruments_shares`` for status values."""
-    return call_api("InstrumentsService", "Bonds", _list_body(instrument_status, instrument_exchange))
+    return call_api(
+        "InstrumentsService", "Bonds", _list_body(instrument_status, instrument_exchange)
+    )
 
 
 @mcp.tool()
@@ -54,7 +58,9 @@ def instruments_etfs(
     instrument_exchange: str | None = None,
 ) -> dict[str, Any]:
     """List ETFs."""
-    return call_api("InstrumentsService", "Etfs", _list_body(instrument_status, instrument_exchange))
+    return call_api(
+        "InstrumentsService", "Etfs", _list_body(instrument_status, instrument_exchange)
+    )
 
 
 @mcp.tool()
@@ -63,7 +69,9 @@ def instruments_currencies(
     instrument_exchange: str | None = None,
 ) -> dict[str, Any]:
     """List currency pairs traded on the exchange."""
-    return call_api("InstrumentsService", "Currencies", _list_body(instrument_status, instrument_exchange))
+    return call_api(
+        "InstrumentsService", "Currencies", _list_body(instrument_status, instrument_exchange)
+    )
 
 
 @mcp.tool()
@@ -72,7 +80,9 @@ def instruments_futures(
     instrument_exchange: str | None = None,
 ) -> dict[str, Any]:
     """List futures."""
-    return call_api("InstrumentsService", "Futures", _list_body(instrument_status, instrument_exchange))
+    return call_api(
+        "InstrumentsService", "Futures", _list_body(instrument_status, instrument_exchange)
+    )
 
 
 @mcp.tool()
@@ -82,7 +92,9 @@ def instruments_options(
 ) -> dict[str, Any]:
     """List options (deprecated by the API in favour of ``instruments_options_by``,
     but still returns data)."""
-    return call_api("InstrumentsService", "Options", _list_body(instrument_status, instrument_exchange))
+    return call_api(
+        "InstrumentsService", "Options", _list_body(instrument_status, instrument_exchange)
+    )
 
 
 @mcp.tool()
@@ -162,7 +174,9 @@ def instruments_option_by(id_type: str, id: str, class_code: str | None = None) 
 
 
 @mcp.tool()
-def instruments_get_instrument_by(id_type: str, id: str, class_code: str | None = None) -> dict[str, Any]:
+def instruments_get_instrument_by(
+    id_type: str, id: str, class_code: str | None = None
+) -> dict[str, Any]:
     """Generic single-instrument lookup (works across all instrument types)."""
     return call_api("InstrumentsService", "GetInstrumentBy", _by_body(id_type, id, class_code))
 
@@ -226,7 +240,9 @@ def instruments_get_countries() -> dict[str, Any]:
 
 
 @mcp.tool()
-def instruments_get_brands(limit: int | None = None, page_token: str | None = None) -> dict[str, Any]:
+def instruments_get_brands(
+    limit: int | None = None, page_token: str | None = None
+) -> dict[str, Any]:
     """List of brands (parents of instruments)."""
     body: dict[str, Any] = {}
     if limit is not None or page_token is not None:

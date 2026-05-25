@@ -26,9 +26,7 @@ def _configure_logging() -> None:
     level_name = os.environ.get("TBANK_LOG_LEVEL", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
     handler = logging.StreamHandler(stream=sys.stderr)
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-    )
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     root = logging.getLogger()
     root.handlers.clear()
     root.addHandler(handler)
@@ -40,10 +38,10 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP("tinkoff-mcp")
 
-_client: "TInvestClient | None" = None
+_client: TInvestClient | None = None
 
 
-def get_client() -> "TInvestClient":
+def get_client() -> TInvestClient:
     """Return the shared :class:`TInvestClient`, creating it on first use."""
     global _client
     if _client is None:

@@ -69,15 +69,15 @@ def _enrich_portfolio(portfolio: dict[str, Any]) -> dict[str, Any]:
         if qty is not None and cur is not None:
             current_value = (qty * cur).quantize(Decimal("0.01"))
 
-        # Prefer locally-computed (current_value − cost_basis) for clarity and
+        # Prefer locally-computed (current_value - cost_basis) for clarity and
         # to avoid the dual-meaning quirk in the API (position-level
         # ``expectedYield`` is in money, portfolio-level is in percent).
         if cost_basis is not None and current_value is not None:
             pnl_abs = (current_value - cost_basis).quantize(Decimal("0.01"))
             if cost_basis != 0:
-                pnl_pct = (
-                    (current_value - cost_basis) / cost_basis * 100
-                ).quantize(Decimal("0.01"))
+                pnl_pct = ((current_value - cost_basis) / cost_basis * 100).quantize(
+                    Decimal("0.01")
+                )
         else:
             # Fallback: API value (assumed absolute money at position level).
             pnl_abs = _to_decimal(pos.get("expectedYield"))
@@ -181,9 +181,7 @@ def operations_get_withdraw_limits(account_id: str) -> dict[str, Any]:
     Args:
         account_id: Account identifier from ``users_get_accounts``.
     """
-    return call_api(
-        "OperationsService", "GetWithdrawLimits", {"accountId": account_id}
-    )
+    return call_api("OperationsService", "GetWithdrawLimits", {"accountId": account_id})
 
 
 @mcp.tool()
@@ -235,7 +233,7 @@ def operations_get_operations_by_cursor(
         account_id: Account id.
         from_/to: ISO-8601 timestamps; leave empty for "as far back as the API allows".
         cursor: Pass ``next_cursor`` from the previous page; empty for first page.
-        limit: Page size (1–1000; T-Invest may cap further).
+        limit: Page size (1-1000; T-Invest may cap further).
         instrument_id: Optional FIGI / UID / Position UID filter.
         state: ``OPERATION_STATE_EXECUTED`` etc.
         operation_types: List of OperationType enums to keep (e.g. ``['OPERATION_TYPE_BUY','OPERATION_TYPE_SELL']``).

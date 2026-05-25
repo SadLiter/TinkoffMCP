@@ -39,7 +39,7 @@ def call_api(service: str, method: str, body: dict[str, Any] | None = None) -> A
             "message": _redact(str(exc)) or "",
             "description": None,
         }
-    except Exception as exc:  # noqa: BLE001 - last-resort guard.
+    except Exception as exc:  # last-resort guard — see comment below
         # We intentionally use `Exception`, not `BaseException`, so that
         # KeyboardInterrupt / SystemExit / GeneratorExit still propagate
         # and let the stdio loop shut down cleanly.

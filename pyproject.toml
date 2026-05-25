@@ -27,6 +27,11 @@ dependencies = [
 [project.scripts]
 tinkoff-mcp = "tinkoff_mcp.server:main"
 
+[dependency-groups]
+dev = [
+    "ruff>=0.9,<1",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -36,3 +41,57 @@ packages = ["src/tinkoff_mcp"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "certs/russian_trusted_ca.pem" = "tinkoff_mcp/_certs/russian_trusted_ca.pem"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src"]
+extend-exclude = [".venv", ".beads", ".claude", ".serena", "certs"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = false
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade (PEP 604, PEP 585, f-strings, etc.)
+    "B",   # bugbear
+    "SIM", # simplify
+    "C4",  # comprehensions
+    "RUF", # ruff-specific
+    "G",   # flake8-logging-format (e.g. forbid f-strings in logging)
+    "PIE", # misc lints
+    "PTH", # use pathlib over os.path
+    "A",   # builtin shadowing
+    "ARG", # unused arguments
+    "T20", # no print/pprint (stdio cleanliness)
+    "RET", # return refactors
+    "PL",  # pylint subset
+]
+ignore = [
+    "PLR0913", # too-many-arguments — many tool funcs map directly to API parameters
+    "PLR2004", # magic value comparisons — read fine in domain code
+    "E501",    # line too long — formatter handles, docstrings with enum lists are intentionally wide
+    "RET504",  # unnecessary assignment before return — sometimes clearer
+    "SIM108",  # ternary not always clearer
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tool modules consist almost entirely of @mcp.tool wrappers — they intentionally shadow
+# the `id` builtin for one specific reason: the JSON Schema field exposed to the LLM
+# must match the T-Invest API field name verbatim, and that field is literally `id`.
+"src/tinkoff_mcp/tools/*.py" = ["A002"]
+# server.py uses lazy imports (PLC0415) to defer FastMCP and client cost until
+# the stdio loop is actually about to run; the `global _client` (PLW0603) is the
+# whole point of the lazy singleton pattern.
+"src/tinkoff_mcp/server.py" = ["PLC0415", "PLW0603"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tinkoff_mcp"]
+combine-as-imports = true

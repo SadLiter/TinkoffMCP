@@ -174,4 +174,13 @@ Claude автоматически выберет нужный MCP-инструм
 
 ## Contributing
 
-Pull-request'ы приветствуются. Перед PR прогоните: `uv run tinkoff-mcp` — сервер должен подняться и не писать ничего в stdout.
+Pull-request'ы приветствуются. Перед PR:
+
+```bash
+uv sync --group dev          # установить ruff
+uv run ruff format src/      # отформатировать
+uv run ruff check src/ scripts/   # линт
+uv run tinkoff-mcp           # сервер должен подняться и НЕ писать ничего в stdout
+```
+
+Конфиг линтера и форматтера — в `[tool.ruff]` секции `pyproject.toml`. Целевая версия Python — `py310`, длина строки — 100.

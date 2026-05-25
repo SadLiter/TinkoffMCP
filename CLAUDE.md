@@ -67,12 +67,19 @@ bd close <id>         # Complete work
 
 ## Build & Test
 
-_Add your build and test commands here_
+```bash
+uv sync --group dev               # install runtime + dev deps (ruff)
+uv run ruff format src/           # format
+uv run ruff check src/ scripts/   # lint — must pass before PR
+uv run tinkoff-mcp                # smoke-start the MCP server (Ctrl+C to stop)
+```
+
+Smoke-test that stdio stays clean (required — JSON-RPC channel must not be polluted):
 
 ```bash
-# Example:
-# uv sync
-# uv run python -m server  # smoke-start the MCP server
+INVEST_TOKEN=t.dummy uv run tinkoff-mcp >/tmp/out.log 2>/tmp/err.log < /dev/null &
+sleep 1; kill %1 2>/dev/null
+wc -c /tmp/out.log   # must be 0
 ```
 
 ## Architecture Overview

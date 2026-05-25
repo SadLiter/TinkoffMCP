@@ -86,13 +86,9 @@ def _resolve_ca_bundle() -> str | bool:
     if env:
         if Path(env).is_file():
             return env
-        raise TInvestConfigError(
-            f"TBANK_CA_BUNDLE points to a missing file: {env}"
-        )
+        raise TInvestConfigError(f"TBANK_CA_BUNDLE points to a missing file: {env}")
 
-    repo_local = (
-        Path(__file__).resolve().parents[2] / "certs" / "russian_trusted_ca.pem"
-    )
+    repo_local = Path(__file__).resolve().parents[2] / "certs" / "russian_trusted_ca.pem"
     if repo_local.is_file():
         return str(repo_local)
 
@@ -100,9 +96,7 @@ def _resolve_ca_bundle() -> str | bool:
         # Chained joinpath() — single-arg form for Python 3.10/3.11
         # compatibility with MultiplexedPath/Traversable.
         resource = (
-            resources.files("tinkoff_mcp")
-            .joinpath("_certs")
-            .joinpath("russian_trusted_ca.pem")
+            resources.files("tinkoff_mcp").joinpath("_certs").joinpath("russian_trusted_ca.pem")
         )
         if resource.is_file():
             # as_file() materialises into a real filesystem path so that
@@ -140,9 +134,7 @@ class TInvestClient:
 
         base = (base_url or os.environ.get("TBANK_API_BASE") or DEFAULT_API_BASE).rstrip("/")
         if not base.startswith("https://"):
-            raise TInvestConfigError(
-                f"TBANK_API_BASE must be an https:// URL, got {base!r}"
-            )
+            raise TInvestConfigError(f"TBANK_API_BASE must be an https:// URL, got {base!r}")
         if base != DEFAULT_API_BASE:
             logger.warning(
                 "Using non-default TBANK_API_BASE=%s — verify you trust this endpoint",
@@ -174,7 +166,7 @@ class TInvestClient:
     def close(self) -> None:
         self._client.close()
 
-    def __enter__(self) -> "TInvestClient":
+    def __enter__(self) -> TInvestClient:
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -192,9 +184,7 @@ class TInvestClient:
         ``method`` is the bare method name (e.g. ``GetAccounts``).
         """
         if not (_SERVICE_METHOD_RE.match(service) and _SERVICE_METHOD_RE.match(method)):
-            raise TInvestError(
-                f"Invalid service/method identifier: {service!r}/{method!r}"
-            )
+            raise TInvestError(f"Invalid service/method identifier: {service!r}/{method!r}")
         path = f"/{SERVICE_PREFIX}.{service}/{method}"
         payload = body or {}
         logger.debug("→ %s/%s body_keys=%s", service, method, sorted(payload.keys()))
@@ -225,8 +215,6 @@ class TInvestClient:
             ) from exc
 
         if logger.isEnabledFor(logging.DEBUG):
-            shape = (
-                sorted(data.keys()) if isinstance(data, dict) else type(data).__name__
-            )
+            shape = sorted(data.keys()) if isinstance(data, dict) else type(data).__name__
             logger.debug("← %s/%s response=%s", service, method, shape)
         return data
