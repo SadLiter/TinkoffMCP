@@ -84,6 +84,12 @@ def p2p_get_ad_info(item_id: str) -> dict[str, Any]:
     return post("/v5/p2p/item/info", body={"itemId": item_id})
 
 
+# Bybit P2P order-history caps single-query time window at ~90 days.
+# Anything longer comes back as a silent empty `result: {}` — no error,
+# indistinguishable from "no orders found". We validate up front instead.
+_P2P_MAX_WINDOW_MS = 90 * 24 * 3600 * 1000
+
+
 def _p2p_orders_body(
     *,
     status: int | None,
@@ -96,13 +102,36 @@ def _p2p_orders_body(
 ) -> dict[str, Any]:
     """Build the request body for both P2P order-list endpoints.
 
-    Bybit caps ``size`` at 30 — values above that make the API silently return
-    ``result: {}`` (no count/items, no error). We raise early instead.
+    Validates everything Bybit silently rejects: ``size`` (1-30), ``page`` (>=1),
+    and ``end_time - begin_time`` (<=90 days). When either ``begin_time`` or
+    ``end_time`` is given, both must be present.
     """
     if not 1 <= size <= 30:
         raise ValueError(f"P2P size must be in [1, 30], got {size}")
     if page < 1:
         raise ValueError(f"P2P page must be >= 1, got {page}")
+    if (begin_time is None) != (end_time is None):
+        raise ValueError("P2P begin_time and end_time must be provided together (or both omitted)")
+    if begin_time is not None and end_time is not None:
+        try:
+            b_ms = int(begin_time)
+            e_ms = int(end_time)
+        except (ValueError, TypeError) as exc:
+            raise ValueError(
+                f"P2P begin_time/end_time must be string ms timestamps, "
+                f"got {begin_time!r}/{end_time!r}"
+            ) from exc
+        if e_ms <= b_ms:
+            raise ValueError(f"P2P end_time must be > begin_time (got begin={b_ms}, end={e_ms})")
+        span_ms = e_ms - b_ms
+        if span_ms > _P2P_MAX_WINDOW_MS:
+            days = span_ms / 86_400_000
+            raise ValueError(
+                f"P2P time window must be <= 90 days (got {days:.1f}). "
+                "Bybit silently returns empty result for longer windows — "
+                "split into 90-day chunks and call repeatedly."
+            )
+
     body: dict[str, Any] = {"page": page, "size": size}
     for k, v in (
         ("status", status),
@@ -114,6 +143,30 @@ def _p2p_orders_body(
         if v is not None:
             body[k] = v
     return body
+
+
+def _surface_empty_p2p_response(result: Any, body: dict[str, Any]) -> Any:
+    """Convert a silent empty-`{}` P2P response into a structured error envelope.
+
+    Bybit P2P orders endpoints normally return ``{count, items}`` — even when
+    there are no orders, ``{count: 0, items: []}`` is returned. A bare ``{}``
+    means Bybit silently rejected the request shape and gave us nothing to
+    distinguish it from a real success. We surface that explicitly so the LLM
+    / user does not interpret it as "no orders".
+    """
+    if isinstance(result, dict) and not result:
+        return {
+            "error": True,
+            "ret_code": "empty_response",
+            "ret_msg": (
+                "Bybit returned an empty result `{}` — usually means a parameter "
+                "shape was silently rejected. Check size (<=30), time window "
+                "(<=90 days), and string-vs-int types."
+            ),
+            "http_status": 200,
+            "request_body": body,
+        }
+    return result
 
 
 @mcp.tool()
@@ -128,7 +181,15 @@ def p2p_get_orders(
 ) -> dict[str, Any]:
     """My P2P orders, all statuses (`/v5/p2p/order/simplifyList`).
 
-    By default returns orders from the last 90 days. Max history window 180 days.
+    **Important defaults & limits:**
+
+    * Without ``begin_time``/``end_time`` Bybit returns only the **most recent**
+      orders (typically last ~90 days). To see older orders you must pass an
+      explicit window.
+    * Each query window must be **<= 90 days** (Bybit silently returns
+      empty result for longer ranges — we validate up front).
+    * To scan a longer history, split into 90-day chunks and call repeatedly.
+
     Returns ``{count, items}`` per Bybit P2P spec.
 
     Args:
@@ -136,23 +197,22 @@ def p2p_get_orders(
             ``10`` waiting for buyer payment / ``20`` waiting for seller release /
             ``30`` appealing / ``40`` cancelled / ``50`` finished /
             ``60`` paying-failed / ``70`` time-out-cancelled / ``80`` cancelling.
-        begin_time/end_time: **String** timestamps in ms (e.g. ``"1700000000000"``).
+        begin_time/end_time: **String** ms timestamps (e.g. ``"1700000000000"``).
+            Both must be provided together or both omitted.
         side: Single integer — ``0`` Buy / ``1`` Sell.
         page: Page number, 1-based.
         size: Rows per page, 1-30 (max 30 enforced).
     """
-    return post(
-        "/v5/p2p/order/simplifyList",
-        body=_p2p_orders_body(
-            status=status,
-            begin_time=begin_time,
-            end_time=end_time,
-            token_id=token_id,
-            side=side,
-            page=page,
-            size=size,
-        ),
+    body = _p2p_orders_body(
+        status=status,
+        begin_time=begin_time,
+        end_time=end_time,
+        token_id=token_id,
+        side=side,
+        page=page,
+        size=size,
     )
+    return _surface_empty_p2p_response(post("/v5/p2p/order/simplifyList", body=body), body)
 
 
 @mcp.tool()
@@ -167,21 +227,21 @@ def p2p_get_pending_orders(
 ) -> dict[str, Any]:
     """Pending (active) P2P orders only (`/v5/p2p/order/pending/simplifyList`).
 
-    Same request shape as ``p2p_get_orders`` — see its docstring for status/side
-    enums. Size capped at 30 (otherwise Bybit returns empty ``result: {}``).
+    Same request shape and limits as ``p2p_get_orders`` (see its docstring) —
+    ``size`` <= 30, time window <= 90 days, both date params together or
+    neither. Pending orders are normally short-lived, so the window rarely
+    matters in practice.
     """
-    return post(
-        "/v5/p2p/order/pending/simplifyList",
-        body=_p2p_orders_body(
-            status=status,
-            begin_time=begin_time,
-            end_time=end_time,
-            token_id=token_id,
-            side=side,
-            page=page,
-            size=size,
-        ),
+    body = _p2p_orders_body(
+        status=status,
+        begin_time=begin_time,
+        end_time=end_time,
+        token_id=token_id,
+        side=side,
+        page=page,
+        size=size,
     )
+    return _surface_empty_p2p_response(post("/v5/p2p/order/pending/simplifyList", body=body), body)
 
 
 @mcp.tool()
